@@ -1,0 +1,18 @@
+/* From Uiverse.io by Nawsome */ 
+.circle {
+  animation: move571 4s linear infinite;
+}
+
+.circle.right {
+  animation-direction: reverse;
+}
+
+@keyframes move571 {
+  25% {
+    transform: translateX(-32px);
+  }
+
+  75% {
+    transform: translateX(32px);
+  }
+}

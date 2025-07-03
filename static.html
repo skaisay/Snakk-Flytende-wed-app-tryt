@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PaeeeApi - AI Assistant PWA</title>
+  <meta name="description" content="Your intelligent AI assistant that works both online and offline. Ask me anything!">
+  <link rel="manifest" href="/client/public/manifest.json">
+  <meta name="theme-color" content="#7c3aed">
+  <link rel="apple-touch-icon" href="/client/public/icon-192x192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="PaeeeApi">
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: #000;
+      color: #fff;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Скрываем полосы прокрутки */
+    * {
+      scrollbar-width: none; /* Firefox */
+      -ms-overflow-style: none; /* IE и Edge */
+    }
+
+    *::-webkit-scrollbar {
+      display: none; /* Chrome, Safari и Opera */
+    }
+    
+    .header {
+      backdrop-filter: blur(19px) saturate(200%);
+      -webkit-backdrop-filter: blur(19px) saturate(200%);
+      background-color: rgba(17, 25, 40, 0.43);
+      border-radius: 0 0 20px 20px;
+      border: 1px solid rgba(255, 255, 255, 0.125);
+      border-top: none;
+      padding: 8px 16px;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      box-sizing: border-box;
+      height: 70px;
+      flex-direction: column;
+      padding-top: 6px;
+    }
+    
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      margin-bottom: 0px;
+      margin-top: 4px;
+    }
+    
+    .header-animation {
+      width: 50px;
+      height: 30px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #fff;
+      margin: 0;
+      flex: 1;
+      text-align: center;
+      transition: transform 0.3s ease;
+    }
+    
+    .title.shifted {
+      transform: translateY(-2px);
+    }
+    
+    .status-indicator {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.6);
+      text-align: center;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    
+    .status-indicator.visible {
+      opacity: 1;
+    }
+    
+    .thinking-dots {
+      display: inline-block;
+      animation: thinking 1.5s infinite;
+    }
+    
+    @keyframes thinking {
+      0%, 60%, 100% { content: "..."; }
+      20% { content: "."; }
+      40% { content: ".."; }
+    }
+    
+    /* Анимация из файлов пользователя */
+    .circle {
+      animation: move571 4s linear infinite;
+    }
+
+    .circle.right {
+      animation-direction: reverse;
+    }
+
+    @keyframes move571 {
+      25% {
+        transform: translateX(-12px);
+      }
+      75% {
+        transform: translateX(12px);
+      }
+    }
+
+    .button {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background-color: rgb(20, 20, 20);
+      border: none;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0px 0px 20px rgba(0, 0, 0, 0.164);
+      cursor: pointer;
+      transition-duration: .3s;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .svgIcon {
+      width: 12px;
+      transition-duration: .3s;
+    }
+
+    .svgIcon path {
+      fill: white;
+    }
+
+    .button:hover {
+      width: 140px;
+      border-radius: 50px;
+      transition-duration: .3s;
+      background-color: rgb(255, 69, 69);
+      align-items: center;
+    }
+
+    .button:hover .svgIcon {
+      width: 50px;
+      transition-duration: .3s;
+      transform: translateY(60%);
+    }
+
+    .button::before {
+      position: absolute;
+      top: -20px;
+      content: "Новый чат";
+      color: white;
+      transition-duration: .3s;
+      font-size: 2px;
+    }
+
+    .button:hover::before {
+      font-size: 13px;
+      opacity: 1;
+      transform: translateY(30px);
+      transition-duration: .3s;
+    }
+    
+    .main {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      text-align: center;
+      pointer-events: none;
+    }
+    
+    /* Animation loader styles */
+    .loader {
+      display: flex;
+      width: 8rem;
+      height: 8rem;
+      justify-items: center;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+
+    .head {
+      width: 100%;
+      height: 100%;
+      background-color: #FA95FB;
+      border-radius: 50%;
+      animation: move 3s linear infinite;
+      box-shadow: 0 1rem 1rem #E220B8;
+      filter: blur(.3rem);
+      z-index: 1;
+    }
+
+    .eye {
+      display: flex;
+      position: absolute;
+      width: 4rem;
+      height: 4rem;
+      background-color: #EFFFC8;
+      border-radius: 50%;
+      align-items: center;
+      justify-content: center;
+      z-index: 2;
+      box-shadow: 0 0 1rem #F752F7;
+      animation: move 5s alternate infinite;
+    }
+
+    .eye::before {
+      content: "";
+      display: flex;
+      width: 1rem;
+      height: 2rem;
+      background-color: #000;
+      border-radius: 50%;
+      animation: blink 4s ease-in-out alternate infinite;
+    }
+
+    .flames {
+      display: flex;
+      position: absolute;
+      z-index: 0;
+    }
+
+    .particle {
+      display: flex;
+      position: absolute;
+      background-color: #FA95FB;
+      border-radius: 50%;
+      filter: blur(.3rem);
+      border-top: 5px solid #E220B8;
+      border-left: 5px solid #E220B8;
+    }
+
+    .flames::before {
+      content: "";
+      position: absolute;
+      width: 8rem;
+      height: 8rem;
+      background: #f865d8;
+      filter: blur(5rem);
+      opacity: 0.5;
+      border-radius: 50%;
+      top: -8rem;
+      left: -4rem;
+      z-index: 4;
+      animation: pulse 3s linear infinite;
+    }
+
+    .particle:nth-child(1) {
+      width: 4rem;
+      height: 4rem;
+      top: -6rem;
+      animation: move 7s alternate-reverse infinite;
+    }
+
+    .particle:nth-child(2) {
+      width: 1.5rem;
+      height: 1.5rem;
+      top: -8rem;
+      left: -5rem;
+      animation: move 1.5s ease-in-out reverse infinite;
+    }
+
+    .particle:nth-child(3) {
+      width: 4rem;
+      height: 4rem;
+      top: -5rem;
+      left: -4rem;
+      animation: move 8s alternate-reverse infinite;
+    }
+
+    .particle:nth-child(4) {
+      width: 3rem;
+      height: 3rem;
+      top: -7.5rem;
+      animation: move 4s alternate-reverse infinite;
+    }
+
+    .particle:nth-child(5) {
+      width: 2rem;
+      height: 2rem;
+      top: -9rem;
+      left: 1rem;
+      animation: move 2.5s alternate-reverse infinite;
+    }
+
+    .particle:nth-child(6) {
+      width: 2rem;
+      height: 2rem;
+      top: -6.8rem;
+      left: -1.5rem;
+      animation: move 5s alternate-reverse infinite;
+    }
+
+    .particle:nth-child(7) {
+      width: 1rem;
+      height: 1rem;
+      top: -10rem;
+      left: -1rem;
+      animation: move 1.2s alternate-reverse infinite;
+    }
+
+    .particle:nth-child(8) {
+      width: 1.3rem;
+      height: 1.3rem;
+      top: -7.5rem;
+      left: -2rem;
+      animation: move 2.5s alternate-reverse infinite;
+    }
+    
+    .subtitle {
+      color: #9ca3af;
+      font-size: 16px;
+    }
+    
+    .input-area {
+      position: fixed;
+      bottom: 20px;
+      left: 16px;
+      right: 16px;
+      z-index: 100;
+      padding: 0;
+      margin: 0;
+      background: transparent;
+      border: none;
+    }
+    
+    .input-container {
+      position: relative;
+      margin: 0;
+      padding: 0;
+      background: transparent;
+      border: none;
+    }
+    
+    .input {
+      width: 100%;
+      backdrop-filter: blur(19px) saturate(200%);
+      -webkit-backdrop-filter: blur(19px) saturate(200%);
+      background-color: rgba(17, 25, 40, 0.43);
+      border: 1px solid rgba(255, 255, 255, 0.125);
+      border-radius: 28px;
+      padding: 18px 60px 18px 20px;
+      color: #fff;
+      font-size: 16px;
+      outline: none;
+      margin: 0;
+      box-sizing: border-box;
+      height: 56px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+    
+    .input::placeholder {
+      color: rgba(255, 255, 255, 0.6);
+    }
+    
+    .send-button {
+      position: absolute;
+      right: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 40px;
+      height: 40px;
+      background: #0088cc;
+      border: none;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 16px;
+      color: #fff;
+      transition: all 0.2s;
+      z-index: 10;
+    }
+    
+    .send-button:hover {
+      background: #0077b3;
+      transform: translateY(-50%) scale(1.05);
+    }
+    
+    .send-button:disabled {
+      background: #666;
+      cursor: not-allowed;
+      transform: translateY(-50%);
+    }
+    
+    @keyframes move {
+      0% {
+        transform: translate(0, 0);
+      }
+
+      50% {
+        transform: translate(4px, 6px);
+      }
+
+      100% {
+        transform: translate(0, 0);
+      }
+    }
+
+    @keyframes blink {
+      20% {
+        transform: translate(0, 0);
+        height: 2rem;
+      }
+
+      30% {
+        height: 0;
+      }
+
+      40% {
+        transform: translate(5px, 10px);
+        height: 0;
+      }
+
+      50% {
+        height: 2rem;
+      }
+
+      70% {
+        transform: translate(-10px, -10px);
+      }
+
+      90% {
+        transform: translate(0, 0);
+      }
+    }
+
+    @keyframes pulse {
+      0% {
+        opacity: 0.5;
+      }
+
+      50% {
+        opacity: 1;
+      }
+
+      100% {
+        opacity: 0.5;
+      }
+    }
+    
+    .messages {
+      position: fixed;
+      top: 70px;
+      left: 0;
+      right: 0;
+      bottom: 100px;
+      padding: 12px;
+      overflow-y: scroll;
+      display: none;
+      flex-direction: column;
+      gap: 12px;
+      z-index: 10;
+      margin: 0;
+    }
+    
+    .message {
+      max-width: 80%;
+      padding: 12px 16px;
+      border-radius: 18px;
+      word-wrap: break-word;
+      backdrop-filter: blur(15px) saturate(200%);
+      -webkit-backdrop-filter: blur(15px) saturate(200%);
+      border: 1px solid rgba(255, 255, 255, 0.125);
+    }
+    
+    .message.user {
+      background-color: rgba(37, 99, 235, 0.75);
+      margin-left: auto;
+    }
+    
+    .message.assistant {
+      background-color: rgba(17, 25, 40, 0.75);
+      margin-right: auto;
+    }
+    
+    .loading {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      color: #9ca3af;
+    }
+    
+    .loading-dot {
+      width: 8px;
+      height: 8px;
+      background: #7c3aed;
+      border-radius: 50%;
+      animation: loading 1.5s infinite;
+    }
+    
+    .loading-dot:nth-child(2) { animation-delay: 0.2s; }
+    .loading-dot:nth-child(3) { animation-delay: 0.4s; }
+    
+    @keyframes loading {
+      0%, 60%, 100% { opacity: 0.3; }
+      30% { opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-top">
+      <div class="header-animation">
+        <svg height="0" width="0">
+          <defs>
+            <filter color-interpolation-filters="sRGB" height="200%" y="-50%" width="200%" x="-50%" id="goo">
+              <feGaussianBlur result="blur" stdDeviation="2" in="SourceGraphic"></feGaussianBlur>
+              <feColorMatrix result="cm" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 21 -7" mode="matrix" in="blur"></feColorMatrix>
+            </filter>
+          </defs>
+        </svg>
+        <svg height="30" width="50" viewBox="0 0 50 30">
+          <g filter="url(#goo)">
+            <circle cy="15" cx="25" r="4" fill="#275EFE" class="circle"></circle>
+            <circle cy="15" cx="25" r="4" fill="#275EFE" class="circle right"></circle>
+          </g>
+        </svg>
+      </div>
+      <h1 class="title">Новый чат</h1>
+      <button class="button" onclick="clearChat()">
+        <svg viewBox="0 0 448 512" class="svgIcon">
+          <path d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z"></path>
+        </svg>
+      </button>
+    </div>
+    <div class="status-indicator" id="statusIndicator">
+      Думаю<span class="thinking-dots">...</span>
+    </div>
+  </div>
+
+  <div class="main" id="main">
+    <div class="loader">
+      <div class="head"></div>
+      
+      <div class="flames">
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+      </div>
+      
+      <div class="eye"></div>
+    </div>
+  </div>
+
+  <div class="messages" id="messages"></div>
+
+  <div class="input-area">
+    <div class="input-container">
+      <input 
+        type="text" 
+        class="input" 
+        placeholder="Спрашивай что угодно"
+        id="messageInput"
+      >
+      <button class="send-button" id="sendButton">✈</button>
+    </div>
+  </div>
+
+  <script>
+    const messages = [];
+    const messagesContainer = document.getElementById('messages');
+    const mainContainer = document.getElementById('main');
+    const messageInput = document.getElementById('messageInput');
+    const sendButton = document.getElementById('sendButton');
+
+    function addMessage(text, sender) {
+      messages.push({ text, sender, id: Date.now() });
+      renderMessages();
+      updateHeader();
+    }
+
+    function updateHeader() {
+      const titleElement = document.querySelector('.title');
+      if (messages.length > 0 && messages[0].sender === 'user') {
+        const firstMessage = messages[0].text;
+        // Ограничиваем до 2 слов, если больше - добавляем три точки
+        const words = firstMessage.split(' ');
+        if (words.length <= 2) {
+          titleElement.textContent = firstMessage;
+        } else {
+          titleElement.textContent = words.slice(0, 2).join(' ') + '...';
+        }
+      } else {
+        titleElement.textContent = 'Новый чат';
+      }
+    }
+
+    function renderMessages() {
+      if (messages.length === 0) {
+        messagesContainer.style.display = 'none';
+        return;
+      }
+
+      messagesContainer.style.display = 'flex';
+      // Анимация всегда видна, не скрываем её
+
+      messagesContainer.innerHTML = messages.map(msg => 
+        `<div class="message ${msg.sender}">${msg.text}</div>`
+      ).join('');
+      
+      // Автоскролл вниз
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    function showLoading() {
+      const statusIndicator = document.getElementById('statusIndicator');
+      const title = document.querySelector('.title');
+      statusIndicator.classList.add('visible');
+      title.classList.add('shifted');
+    }
+
+    function hideLoading() {
+      const statusIndicator = document.getElementById('statusIndicator');
+      const title = document.querySelector('.title');
+      statusIndicator.classList.remove('visible');
+      title.classList.remove('shifted');
+    }
+
+    async function sendMessage() {
+      const text = messageInput.value.trim();
+      if (!text) return;
+
+      addMessage(text, 'user');
+      messageInput.value = '';
+      
+      showLoading();
+      
+      try {
+        // Сначала пробуем локальный бэкенд (если есть)
+        try {
+          const response = await fetch('/api/openai/chat', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ message: text })
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            hideLoading();
+            addMessage(data.content, 'assistant');
+            return;
+          }
+        } catch (backendError) {
+          console.log('Бэкенд недоступен, пробуем прямое подключение к OpenAI');
+        }
+
+        // Если бэкенд недоступен, пробуем прямое подключение к OpenAI
+        const apiKey = getOpenAIKey();
+        if (!apiKey) {
+          throw new Error('Нет API ключа');
+        }
+
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o',
+            messages: [{ role: 'user', content: text }],
+            max_tokens: 500,
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          hideLoading();
+          addMessage(data.choices[0].message.content, 'assistant');
+        } else {
+          throw new Error('OpenAI API недоступен');
+        }
+      } catch (error) {
+        console.log('Использую офлайн режим:', error);
+        hideLoading();
+        
+        // Офлайн ответы на русском
+        const responses = [
+          'Привет! Сейчас я работаю в офлайн режиме. OpenAI API недоступен, но я всё равно рад общению!',
+          'Интересный вопрос! К сожалению, сейчас нет подключения к OpenAI, но скоро всё заработает.',
+          'Спасибо за сообщение! Я в офлайн режиме, но всегда готов помочь базовыми ответами.',
+          'Отлично! Пока что я работаю без интернета, но продолжайте писать мне.',
+          'Хороший вопрос! OpenAI временно недоступен, но я стараюсь быть полезным.'
+        ];
+        const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+        addMessage(randomResponse, 'assistant');
+      }
+    }
+
+    function getOpenAIKey() {
+      // Попробуем получить ключ из разных источников
+      // 1. Из переменных окружения (GitHub Pages)
+      if (typeof window !== 'undefined' && window.OPENAI_API_KEY) {
+        return window.OPENAI_API_KEY;
+      }
+      
+      // 2. Из localStorage
+      const savedKey = localStorage.getItem('openai_api_key');
+      if (savedKey) {
+        return savedKey;
+      }
+      
+      // 3. Запросить у пользователя
+      const userKey = prompt('Введите ваш OpenAI API ключ (он будет сохранён локально):');
+      if (userKey) {
+        localStorage.setItem('openai_api_key', userKey);
+        return userKey;
+      }
+      
+      return null;
+    }
+
+    // Функция очистки чата
+    function clearChat() {
+      messages.length = 0; // Очищаем массив без переназначения
+      renderMessages();
+      updateHeader();
+      console.log('Чат очищен');
+    }
+
+    sendButton.addEventListener('click', sendMessage);
+    messageInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') sendMessage();
+    });
+
+    // Service Worker Registration
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/client/public/sw.js')
+          .then((registration) => {
+            console.log('SW registered: ', registration);
+          })
+          .catch((registrationError) => {
+            console.log('SW registration failed: ', registrationError);
+          });
+      });
+    }
+  </script>
+</body>
+</html>

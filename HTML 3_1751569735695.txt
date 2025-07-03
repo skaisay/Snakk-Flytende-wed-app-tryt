@@ -1,0 +1,17 @@
+<!-- From Uiverse.io by StealthWorm --> 
+<div class="loader">
+  <div class="head"></div>
+  
+  <div class="flames">
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+  </div>
+  
+  <div class="eye"></div>
+</div>
